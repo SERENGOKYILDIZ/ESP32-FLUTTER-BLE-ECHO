@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'dart:convert';
+import 'dart:async';
 
 void main() {
   runApp(const MyApp());
@@ -30,19 +31,20 @@ class BleEchoPage extends StatefulWidget {
 }
 
 class _BleEchoPageState extends State<BleEchoPage> {
-  // BLE durum değişkenleri
+  // BLE status variables
   bool _isScanning = false;
   bool _isConnected = false;
   BluetoothDevice? _connectedDevice;
   BluetoothCharacteristic? _writeCharacteristic;
   BluetoothCharacteristic? _notifyCharacteristic;
+  StreamSubscription<List<int>>? _notifySubscription;
   
-  // UI değişkenleri
+  // UI variables
   final TextEditingController _messageController = TextEditingController();
   final List<String> _receivedMessages = [];
   final ScrollController _scrollController = ScrollController();
   
-  // BLE Servis ve Karakteristik UUID'leri (ESP32 ile aynı olmalı)
+  // BLE Service and Characteristic UUIDs (must match ESP32)
   static const String SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
   static const String WRITE_CHAR_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8";
   static const String NOTIFY_CHAR_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a9";
@@ -60,9 +62,9 @@ class _BleEchoPageState extends State<BleEchoPage> {
     super.dispose();
   }
 
-  // BLE başlatma
+  // Initialize BLE
   void _initializeBle() {
-    // BLE durum değişikliklerini dinle
+    // Listen to BLE status changes
     FlutterBluePlus.adapterState.listen((state) {
       if (state == BluetoothAdapterState.on) {
         _startScan();
@@ -70,7 +72,7 @@ class _BleEchoPageState extends State<BleEchoPage> {
     });
   }
 
-  // BLE tarama başlat
+  // Start BLE scanning
   void _startScan() {
     if (_isScanning) return;
     
@@ -99,7 +101,7 @@ class _BleEchoPageState extends State<BleEchoPage> {
     });
   }
 
-  // BLE taramayı durdur
+  // Stop BLE scanning
   void _stopScan() {
     FlutterBluePlus.stopScan();
     setState(() {
@@ -107,7 +109,7 @@ class _BleEchoPageState extends State<BleEchoPage> {
     });
   }
 
-  // ESP32'ye bağlan
+  // Connect to ESP32
   void _connectToDevice(BluetoothDevice device) async {
     try {
       await device.connect();
@@ -116,42 +118,55 @@ class _BleEchoPageState extends State<BleEchoPage> {
         _isConnected = true;
       });
 
-      // Servisleri keşfet
+      // Discover services
       List<BluetoothService> services = await device.discoverServices();
       
       for (BluetoothService service in services) {
         if (service.uuid.toString() == SERVICE_UUID) {
-          // Write karakteristiğini bul
+          // Find write characteristic
           for (BluetoothCharacteristic characteristic in service.characteristics) {
             if (characteristic.uuid.toString() == WRITE_CHAR_UUID) {
               _writeCharacteristic = characteristic;
             }
             if (characteristic.uuid.toString() == NOTIFY_CHAR_UUID) {
               _notifyCharacteristic = characteristic;
-              // Notify dinlemeye başla
+              print("Notify characteristic found: ${characteristic.uuid}");
+              print("Characteristic properties: ${characteristic.properties}");
+              
+              // Start listening to notify
               await characteristic.setNotifyValue(true);
-              characteristic.value.listen((value) {
+              print("setNotifyValue(true) called");
+              
+              // Cancel previous subscription
+              await _notifySubscription?.cancel();
+              // Create new subscription
+              _notifySubscription = characteristic.value.listen((value) {
+                print("Data received from notify characteristic: $value");
                 if (value.isNotEmpty) {
                   String message = utf8.decode(value);
+                  print("Decoded message: $message");
                   setState(() {
-                    _receivedMessages.add("ESP32_BLE'den: $message");
+                    _receivedMessages.add("From ESP32_BLE: $message");
                   });
                   _scrollToBottom();
+                } else {
+                  print("Received data is empty!");
                 }
               });
+              print("Notify subscription created");
             }
           }
           break;
         }
       }
 
-      _showMessage("ESP32_BLE'ye bağlandı!");
+      _showMessage("Connected to ESP32_BLE!");
     } catch (e) {
-      _showMessage("Bağlantı hatası: $e");
+      _showMessage("Connection error: $e");
     }
   }
 
-  // Mesaj gönder
+  // Send message
   void _sendMessage() async {
     if (_writeCharacteristic == null || _messageController.text.isEmpty) {
       return;
@@ -161,22 +176,32 @@ class _BleEchoPageState extends State<BleEchoPage> {
       String message = _messageController.text;
       List<int> bytes = utf8.encode(message);
       
+      print("Sending message: '$message'");
+      print("Byte array: $bytes");
+      print("Write characteristic UUID: ${_writeCharacteristic!.uuid}");
+      
       await _writeCharacteristic!.write(bytes);
+      print("Message sent successfully");
       
       setState(() {
-        _receivedMessages.add("Gönderilen: $message");
+        _receivedMessages.add("Sent: $message");
       });
       
       _messageController.clear();
       _scrollToBottom();
     } catch (e) {
-      _showMessage("Gönderme hatası: $e");
+      print("Send error: $e");
+      _showMessage("Send error: $e");
     }
   }
 
-  // Bağlantıyı kes
+  // Disconnect
   void _disconnect() async {
     if (_connectedDevice != null) {
+      // Cancel notify subscription
+      await _notifySubscription?.cancel();
+      _notifySubscription = null;
+      
       await _connectedDevice!.disconnect();
       setState(() {
         _connectedDevice = null;
@@ -185,12 +210,12 @@ class _BleEchoPageState extends State<BleEchoPage> {
         _notifyCharacteristic = null;
         _receivedMessages.clear();
       });
-      _showMessage("Bağlantı kesildi");
-      _startScan(); // Yeniden taramaya başla
+      _showMessage("Disconnected");
+      _startScan(); // Start scanning again
     }
   }
 
-  // En alta kaydır
+  // Scroll to bottom
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
@@ -203,7 +228,7 @@ class _BleEchoPageState extends State<BleEchoPage> {
     });
   }
 
-  // Mesaj göster
+  // Show message
   void _showMessage(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
@@ -239,7 +264,7 @@ class _BleEchoPageState extends State<BleEchoPage> {
                 ),
                 const SizedBox(width: 8),
                                   Text(
-                    _isConnected ? 'ESP32_BLE\'ye Bağlı' : 'ESP32_BLE Aranıyor...',
+                    _isConnected ? 'Connected to ESP32_BLE' : 'Searching for ESP32_BLE...',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     color: _isConnected ? Colors.green : Colors.red,
@@ -267,7 +292,7 @@ class _BleEchoPageState extends State<BleEchoPage> {
                     child: TextField(
                       controller: _messageController,
                       decoration: const InputDecoration(
-                        hintText: 'Mesajınızı yazın...',
+                        hintText: 'Type your message...',
                         border: OutlineInputBorder(),
                       ),
                       onSubmitted: (_) => _sendMessage(),
@@ -276,7 +301,7 @@ class _BleEchoPageState extends State<BleEchoPage> {
                   const SizedBox(width: 8),
                   ElevatedButton(
                     onPressed: _sendMessage,
-                    child: const Text('Gönder'),
+                    child: const Text('Send'),
                   ),
                 ],
               ),
@@ -307,7 +332,7 @@ class _BleEchoPageState extends State<BleEchoPage> {
                         const Icon(Icons.message, size: 20),
                         const SizedBox(width: 8),
                         Text(
-                          'Mesaj Geçmişi (${_receivedMessages.length})',
+                          'Message History (${_receivedMessages.length})',
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ],
@@ -317,7 +342,7 @@ class _BleEchoPageState extends State<BleEchoPage> {
                     child: _receivedMessages.isEmpty
                         ? const Center(
                                                          child: Text(
-                               'Henüz mesaj yok...\nESP32_BLE\'ye mesaj gönderin',
+                               'No messages yet...\nSend a message to ESP32_BLE',
                               textAlign: TextAlign.center,
                               style: TextStyle(color: Colors.grey),
                             ),
@@ -328,7 +353,7 @@ class _BleEchoPageState extends State<BleEchoPage> {
                             itemCount: _receivedMessages.length,
                             itemBuilder: (context, index) {
                               String message = _receivedMessages[index];
-                                                             bool isFromESP32 = message.startsWith('ESP32_BLE\'den:');
+                                                             bool isFromESP32 = message.startsWith('From ESP32_BLE:');
                               
                               return Container(
                                 margin: const EdgeInsets.symmetric(vertical: 4),

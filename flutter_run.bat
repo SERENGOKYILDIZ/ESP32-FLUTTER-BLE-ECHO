@@ -1,0 +1,2 @@
+cd flutter_esp32_ble
+flutter run

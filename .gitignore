@@ -1,0 +1,126 @@
+# ESP32 Arduino IDE
+ESP32_BLE/*.elf
+ESP32_BLE/*.bin
+ESP32_BLE/*.map
+ESP32_BLE/*.dis
+ESP32_BLE/*.hex
+
+# Flutter/Dart
+flutter_esp32_ble/.dart_tool/
+flutter_esp32_ble/.flutter-plugins
+flutter_esp32_ble/.flutter-plugins-dependencies
+flutter_esp32_ble/.packages
+flutter_esp32_ble/.pub-cache/
+flutter_esp32_ble/.pub/
+flutter_esp32_ble/build/
+flutter_esp32_ble/.metadata
+
+# Android
+flutter_esp32_ble/android/.gradle
+flutter_esp32_ble/android/captures/
+flutter_esp32_ble/android/gradlew
+flutter_esp32_ble/android/gradlew.bat
+flutter_esp32_ble/android/local.properties
+flutter_esp32_ble/android/**/GeneratedPluginRegistrant.java
+flutter_esp32_ble/android/key.properties
+*.jks
+
+# iOS
+flutter_esp32_ble/ios/Pods/
+flutter_esp32_ble/ios/.symlinks/
+flutter_esp32_ble/ios/Flutter/App.framework
+flutter_esp32_ble/ios/Flutter/Flutter.framework
+flutter_esp32_ble/ios/Flutter/Flutter.podspec
+flutter_esp32_ble/ios/Flutter/Generated.xcconfig
+flutter_esp32_ble/ios/Flutter/ephemeral/
+flutter_esp32_ble/ios/Flutter/app.flx
+flutter_esp32_ble/ios/Flutter/app.zip
+flutter_esp32_ble/ios/Flutter/flutter_assets/
+flutter_esp32_ble/ios/Flutter/flutter_export_environment.sh
+flutter_esp32_ble/ios/ServiceDefinitions.json
+flutter_esp32_ble/ios/Runner.xcworkspace/xcshareddata/
+flutter_esp32_ble/ios/Runner.xcworkspace/xcuserdata/
+
+# macOS
+flutter_esp32_ble/macos/Flutter/GeneratedPluginRegistrant.swift
+flutter_esp32_ble/macos/Flutter/ephemeral/
+
+# Linux
+flutter_esp32_ble/linux/flutter/ephemeral/
+
+# Windows
+flutter_esp32_ble/windows/flutter/ephemeral/
+
+# Web
+flutter_esp32_ble/web/favicon.png
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Dependencies
+node_modules/
+vendor/
+
+# Compiled files
+*.com
+*.class
+*.dll
+*.exe
+*.o
+*.so
+
+# Archives
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Backup files
+*.backup
+*.bak
+*.old
+*.orig
+*.save
+*.swp
+*.tmp
